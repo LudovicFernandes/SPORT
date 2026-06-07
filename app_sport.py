@@ -64,25 +64,8 @@ def charger_donnees():
 if 'initialise_complet' not in st.session_state:
     donnees = charger_donnees()
         
-    # --- PARTIE SPORT (VOS EXERCICES) ---
     if donnees and "exercices_sport" in donnees:
         st.session_state.exercices_sport = donnees["exercices_sport"]
-        
-        # MIGRATION AUTOMATIQUE : Reclassement des Haltères enregistrés sur le Cloud
-        changement_necessaire = False
-        for exo in st.session_state.exercices_sport:
-            if exo.get("categorie") == "💪 Haltères / Banc":
-                changement_necessaire = True
-                if "banc allongé" in exo["nom"].lower():
-                    exo["categorie"] = CAT_PECS
-                elif "épaule" in exo["nom"].lower() or "latérale" in exo["nom"].lower():
-                    exo["categorie"] = CAT_EPAULES
-                else:
-                    exo["categorie"] = CAT_BICEPS
-        
-        if changement_necessaire:
-            sauvegarder_donnees()
-            
     else:
         st.session_state.exercices_sport = [
             {"nom": "Abductor", "categorie": CAT_JAMBES, "poids": 85.0, "reps": 12, "historique": []},
@@ -128,49 +111,90 @@ if 'initialise_complet' not in st.session_state:
     st.session_state.initialise_complet = True
 
 # ==============================================================================
-# STYLE CSS RE-STYLISÉ ET CORRIGÉ POUR LA VISIBILITÉ
+# STYLE CSS : THÈME SOMBRE "ÉNERGIE / SALLE DE SPORT"
 # ==============================================================================
 st.markdown("""
 <style>
-    .stApp { background-color: #f1f3f5; }
-    h1, h2, h3 { color: #1e293b; font-weight: 800; }
-    [data-testid="stSidebar"] { background-color: #1a202c !important; }
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
-    .history-row { background-color: #f8fafc; padding: 8px 15px; border-radius: 6px; margin-top: 5px; font-size: 14px; border-left: 3px solid #10b981; }
-    [data-testid="stVerticalBlockBorderWrapper"] { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 10px; }
+    /* Fond principal sombre et texte clair */
+    .stApp { background-color: #111827 !important; color: #f3f4f6 !important; }
+    h1, h2, h3, h4, p, span, div, label { color: #f3f4f6 !important; }
     
-    /* CORRECTION VISIBILITÉ : Champs de recherche et textes */
+    /* Barre latérale très sombre */
+    [data-testid="stSidebar"] { background-color: #030712 !important; }
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
+    
+    /* Menu déroulant dans la barre latérale */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        background-color: #1f2937 !important; 
+        border: 1px solid #374151 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Carrés d'exercices (Containers) */
+    [data-testid="stVerticalBlockBorderWrapper"] { 
+        background-color: #1f2937 !important; 
+        border-radius: 12px !important; 
+        border: 1px solid #374151 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; 
+        padding: 10px !important; 
+    }
+    
+    /* Style de la petite pastille de catégorie */
+    .cat-badge {
+        font-size:12px; 
+        font-weight:bold; 
+        background-color:#374151; 
+        padding:4px 10px; 
+        border-radius:15px; 
+        color:#fb923c; 
+        margin-left:10px;
+        border: 1px solid #4b5563;
+    }
+    
+    /* Lignes d'historique */
+    .history-row { 
+        background-color: #374151 !important; 
+        padding: 8px 15px !important; 
+        border-radius: 6px !important; 
+        margin-top: 5px !important; 
+        font-size: 14px !important; 
+        border-left: 3px solid #ea580c !important; /* Bordure Orange */
+        color: #d1d5db !important;
+    }
+    
+    /* Inputs et champs de texte */
     .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid #cbd5e1 !important;
+        background-color: #374151 !important;
+        color: #ffffff !important;
+        border: 1px solid #4b5563 !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
     }
-    .stTextInput input::placeholder { color: #64748b !important; opacity: 1 !important; }
+    .stTextInput input::placeholder { color: #9ca3af !important; opacity: 1 !important; }
     
-    /* CORRECTION VISIBILITÉ : Boutons bleus éclatants */
+    /* Boutons en Orange Fluo (Performance) */
     .stButton > button {
-        background-color: #3b82f6 !important; 
+        background-color: #ea580c !important; 
         color: #ffffff !important; 
         font-weight: bold !important;
         border: none !important;
         border-radius: 8px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3) !important;
     }
     .stButton > button:hover {
-        background-color: #2563eb !important;
+        background-color: #c2410c !important;
         color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# FONCTION REPRÉSENTATION AMÉLIORÉE DU MANNEQUIN
+# FONCTION REPRÉSENTATION DU MANNEQUIN (ADAPTÉ AU THÈME SOMBRE)
 # ==============================================================================
 def afficher_mannequin_pro(categorie_active):
-    color_body = "#cbd5e1"
-    color_highlight = "#ef4444"
+    # Couleurs adaptées au thème sombre
+    color_body = "#4b5563" # Gris foncé
+    color_highlight = "#ea580c" # Orange électrique
 
     c_pecs = color_body
     c_dos = color_body
@@ -190,49 +214,49 @@ def afficher_mannequin_pro(categorie_active):
     elif CAT_TRICEPS in categorie_active: c_triceps = color_highlight
 
     html_code = f"""
-    <div style="background-color: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+    <div style="background-color: #1f2937; padding: 15px; border-radius: 12px; border: 1px solid #374151; box-shadow: 0 4px 6px rgba(0,0,0,0.5); text-align: center;">
         <svg width="280" height="260" viewBox="0 0 300 260">
-            <text x="70" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">FACE</text>
+            <text x="70" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#9ca3af" text-anchor="middle">FACE</text>
             <g transform="translate(10, 30)">
-                <circle cx="60" cy="20" r="15" fill="#cbd5e1" />
-                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" />
+                <circle cx="60" cy="20" r="15" fill="#4b5563" />
+                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#4b5563" />
                 
                 <rect x="42" y="42" width="16" height="22" rx="3" fill="{c_pecs}" />
                 <rect x="62" y="42" width="16" height="22" rx="3" fill="{c_pecs}" />
-                <rect x="45" y="66" width="30" height="35" rx="2" fill="#cbd5e1" />
+                <rect x="45" y="66" width="30" height="35" rx="2" fill="#4b5563" />
                 
                 <circle cx="38" cy="48" r="8" fill="{c_epaules}" />
                 <circle cx="82" cy="48" r="8" fill="{c_epaules}" />
                 <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_biceps}" />
                 <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_biceps}" />
-                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" />
-                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" />
+                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#4b5563" />
+                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#4b5563" />
                 
                 <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_f}" />
                 <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_f}" />
-                <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
-                <rect x="64" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
+                <rect x="43" y="160" width="13" height="30" rx="2" fill="#4b5563" />
+                <rect x="64" y="160" width="13" height="30" rx="2" fill="#4b5563" />
             </g>
 
-            <text x="210" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">DOS</text>
+            <text x="210" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#9ca3af" text-anchor="middle">DOS</text>
             <g transform="translate(150, 30)">
-                <circle cx="60" cy="20" r="15" fill="#cbd5e1" />
-                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" />
+                <circle cx="60" cy="20" r="15" fill="#4b5563" />
+                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#4b5563" />
                 
                 <path d="M40 42 L80 42 L75 90 L45 90 Z" fill="{c_dos}" />
-                <rect x="48" y="90" width="24" height="12" rx="2" fill="#cbd5e1" />
+                <rect x="48" y="90" width="24" height="12" rx="2" fill="#4b5563" />
                 
                 <circle cx="38" cy="48" r="8" fill="{c_epaules}" />
                 <circle cx="82" cy="48" r="8" fill="{c_epaules}" />
                 <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_triceps}" />
                 <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_triceps}" />
-                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" />
-                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" />
+                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#4b5563" />
+                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#4b5563" />
                 
                 <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_d}" />
                 <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_d}" />
-                <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
-                <rect x="64" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
+                <rect x="43" y="160" width="13" height="30" rx="2" fill="#4b5563" />
+                <rect x="64" y="160" width="13" height="30" rx="2" fill="#4b5563" />
             </g>
         </svg>
     </div>
@@ -243,21 +267,21 @@ def afficher_mannequin_pro(categorie_active):
 # MENU LATÉRAL
 # ==============================================================================
 st.sidebar.title("🏃‍♂️ Mon Coach Gym")
-st.sidebar.write("Sélectionnez la zone musculaire à travailler aujourd'hui :")
+st.sidebar.write("Sélectionnez la zone musculaire :")
 filtre_cat = st.sidebar.radio("Groupes Musculaires :", ["Tous"] + CATEGORIES)
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Zone d'administration")
-with st.sidebar.expander("➕ Ajouter un nouvel exercice personnalisé"):
+with st.sidebar.expander("➕ Créer un nouvel exercice"):
     nv_nom = st.text_input("Nom de l'exercice :", key="nv_exo_nom", placeholder="Ex: Développé incliné")
     nv_cat = st.selectbox("Catégorie :", CATEGORIES, key="nv_exo_cat")
-    if st.button("Créer la fiche exercice 🛠️"):
+    if st.button("Enregistrer la fiche 🛠️"):
         if nv_nom.strip():
             st.session_state.exercices_sport.append({
                 "nom": nv_nom, "categorie": nv_cat, "poids": 0.0, "reps": 0, "historique": []
             })
             sauvegarder_donnees()
-            st.success("Nouvel exercice enregistré !")
+            st.success("Exercice ajouté !")
             st.rerun()
 
 # ==============================================================================
@@ -266,7 +290,7 @@ with st.sidebar.expander("➕ Ajouter un nouvel exercice personnalisé"):
 col_gauche, col_droite = st.columns([1.3, 0.7])
 
 with col_gauche:
-    st.title("💪 Mes Exercices")
+    st.title("💪 Mes Séances")
     
     recherche = st.text_input("🔍 Rechercher un exercice par nom :", placeholder="Tapez 'Poulie', 'Curl'...")
     
@@ -286,7 +310,8 @@ with col_gauche:
         index_reel = st.session_state.exercices_sport.index(exo)
         
         with st.container(border=True):
-            st.markdown(f"<h3 style='margin-bottom:0;'>{exo['nom']} <span style='font-size:12px; font-weight:normal; background-color:#e2e8f0; padding:2px 8px; border-radius:10px; color:#475569; margin-left:10px;'>{exo['categorie']}</span></h3>", unsafe_allow_html=True)
+            # Utilisation de la nouvelle classe CSS 'cat-badge' pour le style sombre
+            st.markdown(f"<h3 style='margin-bottom:0;'>{exo['nom']} <span class='cat-badge'>{exo['categorie']}</span></h3>", unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns([1.5, 1.5, 1.5])
             
@@ -295,7 +320,7 @@ with col_gauche:
             
             c3.write("") 
             c3.write("")
-            if c3.button("Actualiser ⚡", key=f"btn_{index_reel}", use_container_width=True):
+            if c3.button("Mettre à jour ⚡", key=f"btn_{index_reel}", use_container_width=True):
                 if poids_saisi != exo["poids"] or reps_saisie != exo["reps"]:
                     date_aujourdhui = datetime.date.today().strftime("%d/%m/%Y")
                     
@@ -310,10 +335,10 @@ with col_gauche:
                     st.session_state.exercices_sport[index_reel]["reps"] = reps_saisie
                     
                     sauvegarder_donnees()
-                    st.success("Enregistré !")
+                    st.success("Performance enregistrée !")
                     st.rerun()
             
-            with st.expander("📜 Voir l'historique & Options", expanded=False):
+            with st.expander("📜 Historique de vos charges", expanded=False):
                 if exo["historique"]:
                     for log in reversed(exo["historique"]):
                         st.markdown(f"""
@@ -333,8 +358,8 @@ with col_gauche:
 with col_droite:
     if filtre_cat != "Tous":
         st.markdown("<h2 style='text-align: center;'>Anatomie Ciblée</h2>", unsafe_allow_html=True)
-        st.write("Le mannequin met en valeur la zone musculaire travaillée par la catégorie sélectionnée à gauche :")
+        st.write("Visualisation des muscles sous tension :")
         afficher_mannequin_pro(filtre_cat)
     else:
         st.markdown("<h2 style='text-align: center;'>🏃‍♂️ Vue Globale</h2>", unsafe_allow_html=True)
-        st.info("Sélectionnez une catégorie musculaire spécifique à gauche pour afficher l'analyse anatomique des zones travaillées.")
+        st.info("Sélectionnez une catégorie musculaire spécifique à gauche pour afficher l'analyse anatomique.")
