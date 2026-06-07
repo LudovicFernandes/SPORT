@@ -35,7 +35,6 @@ def sauvegarder_donnees():
     """Sauvegarde les données sécurisées (Invalid JSON fix included)"""
     exercices_json = json.loads(pd.DataFrame(st.session_state.exercices_sport).to_json(orient="records"))
     
-    # On récupère d'abord tout le reste pour ne rien écraser
     donnees_a_sauvegarder = {
         "comptes": st.session_state.get("comptes", {}),
         "suivi_fixes": st.session_state.get("suivi_fixes", {}),
@@ -82,10 +81,9 @@ if 'initialise_complet' not in st.session_state:
                     exo["categorie"] = CAT_BICEPS
         
         if changement_necessaire:
-            sauvegarder_donnees() # On sauvegarde la nouvelle répartition
+            sauvegarder_donnees()
             
     else:
-        # Liste initiale de base
         st.session_state.exercices_sport = [
             {"nom": "Abductor", "categorie": CAT_JAMBES, "poids": 85.0, "reps": 12, "historique": []},
             {"nom": "Leg Press", "categorie": CAT_JAMBES, "poids": 140.0, "reps": 10, "historique": []},
@@ -130,7 +128,7 @@ if 'initialise_complet' not in st.session_state:
     st.session_state.initialise_complet = True
 
 # ==============================================================================
-# STYLE CSS RE-STYLISÉ
+# STYLE CSS RE-STYLISÉ ET CORRIGÉ POUR LA VISIBILITÉ
 # ==============================================================================
 st.markdown("""
 <style>
@@ -140,6 +138,30 @@ st.markdown("""
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
     .history-row { background-color: #f8fafc; padding: 8px 15px; border-radius: 6px; margin-top: 5px; font-size: 14px; border-left: 3px solid #10b981; }
     [data-testid="stVerticalBlockBorderWrapper"] { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 10px; }
+    
+    /* CORRECTION VISIBILITÉ : Champs de recherche et textes */
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+    }
+    .stTextInput input::placeholder { color: #64748b !important; opacity: 1 !important; }
+    
+    /* CORRECTION VISIBILITÉ : Boutons bleus éclatants */
+    .stButton > button {
+        background-color: #3b82f6 !important; 
+        color: #ffffff !important; 
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    .stButton > button:hover {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -227,7 +249,7 @@ filtre_cat = st.sidebar.radio("Groupes Musculaires :", ["Tous"] + CATEGORIES)
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Zone d'administration")
 with st.sidebar.expander("➕ Ajouter un nouvel exercice personnalisé"):
-    nv_nom = st.text_input("Nom de l'exercice :", key="nv_exo_nom")
+    nv_nom = st.text_input("Nom de l'exercice :", key="nv_exo_nom", placeholder="Ex: Développé incliné")
     nv_cat = st.selectbox("Catégorie :", CATEGORIES, key="nv_exo_cat")
     if st.button("Créer la fiche exercice 🛠️"):
         if nv_nom.strip():
@@ -246,7 +268,7 @@ col_gauche, col_droite = st.columns([1.3, 0.7])
 with col_gauche:
     st.title("💪 Mes Exercices")
     
-    recherche = st.text_input("🔍 Rechercher un exercice par nom (ex: Poulie, Curl...) :")
+    recherche = st.text_input("🔍 Rechercher un exercice par nom :", placeholder="Tapez 'Poulie', 'Curl'...")
     
     exercices_filtrés = st.session_state.exercices_sport
     if filtre_cat != "Tous":
@@ -309,7 +331,6 @@ with col_gauche:
                     st.rerun()
 
 with col_droite:
-    # 🎯 CONDITION : On masque l'anatomie si on est sur la page "Tous"
     if filtre_cat != "Tous":
         st.markdown("<h2 style='text-align: center;'>Anatomie Ciblée</h2>", unsafe_allow_html=True)
         st.write("Le mannequin met en valeur la zone musculaire travaillée par la catégorie sélectionnée à gauche :")
