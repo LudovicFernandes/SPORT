@@ -111,31 +111,40 @@ if 'initialise_complet' not in st.session_state:
     st.session_state.initialise_complet = True
 
 # ==============================================================================
-# STYLE CSS : THÈME SOMBRE "ÉNERGIE / SALLE DE SPORT"
+# STYLE CSS : THÈME CLAIR / LUMINEUX (AVEC VISIBILITÉ FORCÉE)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* Fond principal sombre et texte clair */
-    .stApp { background-color: #111827 !important; color: #f3f4f6 !important; }
-    h1, h2, h3, h4, p, span, div, label { color: #f3f4f6 !important; }
+    /* Fond principal clair et texte sombre */
+    .stApp { background-color: #f1f3f5 !important; }
+    h1, h2, h3, h4, p, span, div, label { color: #0f172a !important; }
     
-    /* Barre latérale très sombre */
-    [data-testid="stSidebar"] { background-color: #030712 !important; }
+    /* Barre latérale très sombre (garde un beau contraste) */
+    [data-testid="stSidebar"] { background-color: #1a202c !important; }
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
     
     /* Menu déroulant dans la barre latérale */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
-        background-color: #1f2937 !important; 
-        border: 1px solid #374151 !important;
+        background-color: #2d3748 !important; 
+        border: 1px solid #4a5568 !important;
         border-radius: 8px !important;
     }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary,
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary p {
+        color: #ffffff !important; 
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:focus,
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:focus p {
+        color: #60a5fa !important; 
+        outline: none !important;
+    }
     
-    /* Carrés d'exercices (Containers) */
+    /* Carrés d'exercices (Containers blancs purs) */
     [data-testid="stVerticalBlockBorderWrapper"] { 
-        background-color: #1f2937 !important; 
+        background-color: #ffffff !important; 
         border-radius: 12px !important; 
-        border: 1px solid #374151 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; 
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important; 
         padding: 10px !important; 
     }
     
@@ -143,58 +152,57 @@ st.markdown("""
     .cat-badge {
         font-size:12px; 
         font-weight:bold; 
-        background-color:#374151; 
+        background-color:#e2e8f0; 
         padding:4px 10px; 
         border-radius:15px; 
-        color:#fb923c; 
+        color:#475569; 
         margin-left:10px;
-        border: 1px solid #4b5563;
     }
     
     /* Lignes d'historique */
     .history-row { 
-        background-color: #374151 !important; 
+        background-color: #f8fafc !important; 
         padding: 8px 15px !important; 
         border-radius: 6px !important; 
         margin-top: 5px !important; 
         font-size: 14px !important; 
-        border-left: 3px solid #ea580c !important; /* Bordure Orange */
-        color: #d1d5db !important;
+        border-left: 3px solid #10b981 !important; 
+        color: #334155 !important;
     }
     
-    /* Inputs et champs de texte */
+    /* Inputs et champs de recherche (Bordure visible) */
     .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-        background-color: #374151 !important;
-        color: #ffffff !important;
-        border: 1px solid #4b5563 !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
     }
-    .stTextInput input::placeholder { color: #9ca3af !important; opacity: 1 !important; }
+    .stTextInput input::placeholder { color: #64748b !important; opacity: 1 !important; }
     
-    /* Boutons en Orange Fluo (Performance) */
+    /* Boutons en Bleu Vif (Plus propre sur fond clair) */
     .stButton > button {
-        background-color: #ea580c !important; 
+        background-color: #3b82f6 !important; 
         color: #ffffff !important; 
         font-weight: bold !important;
         border: none !important;
         border-radius: 8px !important;
-        box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
     .stButton > button:hover {
-        background-color: #c2410c !important;
+        background-color: #2563eb !important;
         color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# FONCTION REPRÉSENTATION DU MANNEQUIN (ADAPTÉ AU THÈME SOMBRE)
+# FONCTION REPRÉSENTATION DU MANNEQUIN (MODE CLAIR)
 # ==============================================================================
 def afficher_mannequin_pro(categorie_active):
-    # Couleurs adaptées au thème sombre
-    color_body = "#4b5563" # Gris foncé
-    color_highlight = "#ea580c" # Orange électrique
+    # Couleurs adaptées au thème clair
+    color_body = "#cbd5e1" # Gris clair
+    color_highlight = "#ef4444" # Rouge vif
 
     c_pecs = color_body
     c_dos = color_body
@@ -214,49 +222,49 @@ def afficher_mannequin_pro(categorie_active):
     elif CAT_TRICEPS in categorie_active: c_triceps = color_highlight
 
     html_code = f"""
-    <div style="background-color: #1f2937; padding: 15px; border-radius: 12px; border: 1px solid #374151; box-shadow: 0 4px 6px rgba(0,0,0,0.5); text-align: center;">
+    <div style="background-color: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
         <svg width="280" height="260" viewBox="0 0 300 260">
-            <text x="70" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#9ca3af" text-anchor="middle">FACE</text>
+            <text x="70" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">FACE</text>
             <g transform="translate(10, 30)">
-                <circle cx="60" cy="20" r="15" fill="#4b5563" />
-                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#4b5563" />
+                <circle cx="60" cy="20" r="15" fill="#cbd5e1" />
+                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" />
                 
                 <rect x="42" y="42" width="16" height="22" rx="3" fill="{c_pecs}" />
                 <rect x="62" y="42" width="16" height="22" rx="3" fill="{c_pecs}" />
-                <rect x="45" y="66" width="30" height="35" rx="2" fill="#4b5563" />
+                <rect x="45" y="66" width="30" height="35" rx="2" fill="#cbd5e1" />
                 
                 <circle cx="38" cy="48" r="8" fill="{c_epaules}" />
                 <circle cx="82" cy="48" r="8" fill="{c_epaules}" />
                 <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_biceps}" />
                 <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_biceps}" />
-                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#4b5563" />
-                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#4b5563" />
+                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" />
+                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" />
                 
                 <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_f}" />
                 <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_f}" />
-                <rect x="43" y="160" width="13" height="30" rx="2" fill="#4b5563" />
-                <rect x="64" y="160" width="13" height="30" rx="2" fill="#4b5563" />
+                <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
+                <rect x="64" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
             </g>
 
-            <text x="210" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#9ca3af" text-anchor="middle">DOS</text>
+            <text x="210" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">DOS</text>
             <g transform="translate(150, 30)">
-                <circle cx="60" cy="20" r="15" fill="#4b5563" />
-                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#4b5563" />
+                <circle cx="60" cy="20" r="15" fill="#cbd5e1" />
+                <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" />
                 
                 <path d="M40 42 L80 42 L75 90 L45 90 Z" fill="{c_dos}" />
-                <rect x="48" y="90" width="24" height="12" rx="2" fill="#4b5563" />
+                <rect x="48" y="90" width="24" height="12" rx="2" fill="#cbd5e1" />
                 
                 <circle cx="38" cy="48" r="8" fill="{c_epaules}" />
                 <circle cx="82" cy="48" r="8" fill="{c_epaules}" />
                 <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_triceps}" />
                 <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_triceps}" />
-                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#4b5563" />
-                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#4b5563" />
+                <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" />
+                <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" />
                 
                 <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_d}" />
                 <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_d}" />
-                <rect x="43" y="160" width="13" height="30" rx="2" fill="#4b5563" />
-                <rect x="64" y="160" width="13" height="30" rx="2" fill="#4b5563" />
+                <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
+                <rect x="64" y="160" width="13" height="30" rx="2" fill="#cbd5e1" />
             </g>
         </svg>
     </div>
@@ -310,7 +318,6 @@ with col_gauche:
         index_reel = st.session_state.exercices_sport.index(exo)
         
         with st.container(border=True):
-            # Utilisation de la nouvelle classe CSS 'cat-badge' pour le style sombre
             st.markdown(f"<h3 style='margin-bottom:0;'>{exo['nom']} <span class='cat-badge'>{exo['categorie']}</span></h3>", unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns([1.5, 1.5, 1.5])
