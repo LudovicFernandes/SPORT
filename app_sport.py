@@ -121,7 +121,9 @@ st.markdown("""
     
     /* Barre latérale très sombre (garde un beau contraste) */
     [data-testid="stSidebar"] { background-color: #1a202c !important; }
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
+    
+    /* CORRECTION ICI : h1, h2, h3, h4, label, p forcés en blanc pur dans la barre latérale */
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
     
     /* Menu déroulant dans la barre latérale */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
