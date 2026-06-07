@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components # NOUVEAU : Pour l'affichage pro du mannequin
 import pandas as pd
 import datetime
 import json
@@ -20,29 +21,39 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-CATEGORIES = [
-    "🍗 Jambes", 
-    "🏋️‍♂️ Pecs", 
-    "📐 Dos", 
-    "🦅 Épaules", 
-    "💪 Biceps", 
-    "⚡ Triceps",
-    "💪 Haltères / Banc"
-]
+# Définition des catégories
+CAT_JAMBES = "🍗 Jambes"
+CAT_PECS = "🏋️‍♂️ Pecs"
+CAT_DOS = "📐 Dos"
+CAT_EPAULES = "🦅 Épaules"
+CAT_BICEPS = "💪 Biceps"
+CAT_TRICEPS = "⚡ Triceps"
+CAT_HALTERES = "💪 Haltères / Banc"
+
+CATEGORIES = [CAT_JAMBES, CAT_PECS, CAT_DOS, CAT_EPAULES, CAT_BICEPS, CAT_TRICEPS, CAT_HALTERES]
 
 def sauvegarder_donnees():
-    """Sauvegarde l'état des exercices et de l'historique dans le Cloud"""
+    """Sauvegarde les données sécurisées (Invalid JSON fix included)"""
+    transactions_json = json.loads(st.session_state.transactions.to_json(orient="records"))
+    exercices_json = json.loads(pd.DataFrame(st.session_state.exercices_sport).to_json(orient="records"))
+    
     donnees_a_sauvegarder = {
-        "exercices_sport": st.session_state.exercices_sport
+        "comptes": st.session_state.comptes,
+        "suivi_fixes": st.session_state.suivi_fixes,
+        "transactions": transactions_json,
+        "objectifs_budget": st.session_state.objectifs_budget,
+        "recettes": st.session_state.recettes,
+        "menu_semaine": st.session_state.menu_semaine,
+        "exercices_sport": exercices_json
     }
     try:
         payload = json.dumps(donnees_a_sauvegarder)
         requests.put(URL_JSONBIN, data=payload, headers=HEADERS)
     except Exception as e:
-        st.error(f"Erreur de sauvegarde Cloud : {e}")
+        st.error(f"Erreur de synchronisation Cloud : {e}")
 
 def charger_donnees():
-    """Charge les données depuis JSONBin"""
+    """Charge les données depuis le Cloud via JSONBin"""
     try:
         req = requests.get(URL_JSONBIN, headers=HEADERS)
         if req.status_code == 200:
@@ -51,54 +62,79 @@ def charger_donnees():
         return None
     return None
 
-# Initialisation avec uniquement VOS exercices triés
-if 'initialise_sport' not in st.session_state:
-    data_cloud = charger_donnees()
+# Initialisation des données (Budget + Sport)
+if 'initialise_complet' not in st.session_state:
+    donnees = charger_donnees()
     
-    if data_cloud and "exercices_sport" in data_cloud:
-        st.session_state.exercices_sport = data_cloud["exercices_sport"]
+    # --- PARTIE BUDGET ---
+    comptes_defaut = {"Compte Courant": 0.0, "Revolut (Crypto)": 0.0, "Mon Livret A": 0.0, "Livret Jeune": 0.0, "BoursoBank": 0.0, "PEE": 0.0}
+    # Initialisation des variables Budget (inchangé)
+    if donnees and "comptes" in donnees:
+        st.session_state.comptes = donnees.get("comptes", comptes_defaut)
+        st.session_state.suivi_fixes = donnees.get("suivi_fixes", {})
+        trans_data = donnees.get("transactions", [])
+        st.session_state.transactions = pd.DataFrame(trans_data) if trans_data else pd.DataFrame(columns=["Mois", "Date", "Type", "Catégorie", "Montant", "Compte"])
+        st.session_state.objectifs_budget = donnees.get("objectifs_budget", {})
+        st.session_state.recettes = donnees.get("recettes", [])
+        st.session_state.menu_semaine = donnees.get("menu_semaine", {})
     else:
+        st.session_state.comptes = comptes_defaut
+        st.session_state.suivi_fixes = {}
+        st.session_state.transactions = pd.DataFrame(columns=["Mois", "Date", "Type", "Catégorie", "Montant", "Compte"])
+        st.session_state.objectifs_budget = {}
+        st.session_state.recettes = []
+        st.session_state.menu_semaine = {}
+        
+    # --- PARTIE SPORT (VOS EXERCICES) ---
+    if donnees and "exercices_sport" in donnees:
+        st.session_state.exercices_sport = donnees["exercices_sport"]
+    else:
+        # Votre liste complète triée
         st.session_state.exercices_sport = [
-            {"nom": "Abductor", "categorie": "🍗 Jambes", "poids": 85.0, "reps": 12, "historique": []},
-            {"nom": "Leg Press", "categorie": "🍗 Jambes", "poids": 140.0, "reps": 10, "historique": []},
-            {"nom": "Leg Curl", "categorie": "🍗 Jambes", "poids": 55.0, "reps": 10, "historique": []},
-            {"nom": "Leg Extension", "categorie": "🍗 Jambes", "poids": 55.0, "reps": 12, "historique": []},
-            {"nom": "V Squat", "categorie": "🍗 Jambes", "poids": 25.0, "reps": 10, "historique": []},
-            {"nom": "Prone Legs Curl", "categorie": "🍗 Jambes", "poids": 32.5, "reps": 12, "historique": []},
-            {"nom": "Hack squat", "categorie": "🍗 Jambes", "poids": 40.0, "reps": 10, "historique": []},
-            {"nom": "Bench barre (Développé couché)", "categorie": "🏋️‍♂️ Pecs", "poids": 80.0, "reps": 2, "historique": []},
-            {"nom": "Développé couché Assisté", "categorie": "🏋️‍♂️ Pecs", "poids": 30.0, "reps": 10, "historique": []},
-            {"nom": "Chest press", "categorie": "🏋️‍♂️ Pecs", "poids": 35.0, "reps": 10, "historique": []},
-            {"nom": "Pectoral machine", "categorie": "🏋️‍♂️ Pecs", "poids": 20.0, "reps": 10, "historique": []},
-            {"nom": "Pecs debout machine", "categorie": "🏋️‍♂️ Pecs", "poids": 50.0, "reps": 10, "historique": []},
-            {"nom": "Poulie vis à vis Haut", "categorie": "🏋️‍♂️ Pecs", "poids": 10.0, "reps": 10, "historique": []},
-            {"nom": "Poulie vis à vis Milieu", "categorie": "🏋️‍♂️ Pecs", "poids": 10.0, "reps": 10, "historique": []},
-            {"nom": "Poulie vis à vis Bas", "categorie": "🏋️‍♂️ Pecs", "poids": 7.5, "reps": 10, "historique": []},
-            {"nom": "Tirage horizontal", "categorie": "📐 Dos", "poids": 45.0, "reps": 10, "historique": []},
-            {"nom": "Tirage horizontal 1 main", "categorie": "📐 Dos", "poids": 30.0, "reps": 10, "historique": []},
-            {"nom": "Tirage vertical", "categorie": "📐 Dos", "poids": 55.0, "reps": 10, "historique": []},
-            {"nom": "Pull Down", "categorie": "📐 Dos", "poids": 55.0, "reps": 10, "historique": []},
-            {"nom": "Row machine", "categorie": "📐 Dos", "poids": 65.0, "reps": 10, "historique": []},
-            {"nom": "Frontal pull-down (Fond)", "categorie": "📐 Dos", "poids": 40.0, "reps": 10, "historique": []},
-            {"nom": "Low Row", "categorie": "📐 Dos", "poids": 80.0, "reps": 10, "historique": []},
-            {"nom": "Épaule machine", "categorie": "🦅 Épaules", "poids": 25.0, "reps": 10, "historique": []},
-            {"nom": "Shoulder press épaule", "categorie": "🦅 Épaules", "poids": 25.0, "reps": 10, "historique": []},
-            {"nom": "Élévation latérale Machine", "categorie": "🦅 Épaules", "poids": 25.0, "reps": 10, "historique": []},
-            {"nom": "Poulie vis à vis Haut / Triceps", "categorie": "⚡ Triceps", "poids": 27.5, "reps": 10, "historique": []},
-            {"nom": "Poulie vis à vis Bas Bibi/Tri", "categorie": "⚡ Triceps", "poids": 20.0, "reps": 10, "historique": []},
-            {"nom": "Poulie Triceps (nuque)", "categorie": "⚡ Triceps", "poids": 12.0, "reps": 10, "historique": []},
-            {"nom": "Triceps Push Down corde", "categorie": "⚡ Triceps", "poids": 20.0, "reps": 10, "historique": []},
-            {"nom": "Extension poulie triceps nuque", "categorie": "⚡ Triceps", "poids": 12.5, "reps": 10, "historique": []},
-            {"nom": "Curl banc allongé (Haltères)", "categorie": "💪 Haltères / Banc", "poids": 30.0, "reps": 10, "historique": []},
-            {"nom": "Assis épaule (Haltères)", "categorie": "💪 Haltères / Banc", "poids": 14.0, "reps": 10, "historique": []},
-            {"nom": "Curl marteaux (Haltères)", "categorie": "💪 Haltères / Banc", "poids": 12.0, "reps": 10, "historique": []},
-            {"nom": "Curl haltère assis", "categorie": "💪 Haltères / Banc", "poids": 12.0, "reps": 11, "historique": []},
-            {"nom": "Élévation latérale (Haltères)", "categorie": "💪 Haltères / Banc", "poids": 10.0, "reps": 15, "historique": []},
-            {"nom": "Curl Pupitre", "categorie": "💪 Haltères / Banc", "poids": 15.0, "reps": 15, "historique": []},
-            {"nom": "Curl Pupitre Altère", "categorie": "💪 Haltères / Banc", "poids": 16.0, "reps": 10, "historique": []}
+            {"nom": "Abductor", "categorie": CAT_JAMBES, "poids": 85.0, "reps": 12, "historique": []},
+            {"nom": "Leg Press", "categorie": CAT_JAMBES, "poids": 140.0, "reps": 10, "historique": []},
+            {"nom": "Leg Curl", "categorie": CAT_JAMBES, "poids": 55.0, "reps": 10, "historique": []},
+            {"nom": "Leg Extension", "categorie": CAT_JAMBES, "poids": 55.0, "reps": 12, "historique": []},
+            {"nom": "V Squat", "categorie": CAT_JAMBES, "poids": 25.0, "reps": 10, "historique": []},
+            {"nom": "Prone Legs Curl", "categorie": CAT_JAMBES, "poids": 32.5, "reps": 12, "historique": []},
+            {"nom": "Hack squat", "categorie": CAT_JAMBES, "poids": 40.0, "reps": 10, "historique": []},
+            {"nom": "Bench barre (Développé couché)", "categorie": CAT_PECS, "poids": 80.0, "reps": 2, "historique": []},
+            {"nom": "Développé couché Assisté", "categorie": CAT_PECS, "poids": 30.0, "reps": 10, "historique": []},
+            {"nom": "Chest press", "categorie": CAT_PECS, "poids": 35.0, "reps": 10, "historique": []},
+            {"nom": "Pectoral machine", "categorie": CAT_PECS, "poids": 20.0, "reps": 10, "historique": []},
+            {"nom": "Pecs debout machine", "categorie": CAT_PECS, "poids": 50.0, "reps": 10, "historique": []},
+            {"nom": "Poulie vis à vis Haut", "categorie": CAT_PECS, "poids": 10.0, "reps": 10, "historique": []},
+            {"nom": "Poulie vis à vis Milieu", "categorie": CAT_PECS, "poids": 10.0, "reps": 10, "historique": []},
+            {"nom": "Poulie vis à vis Bas", "categorie": CAT_PECS, "poids": 7.5, "reps": 10, "historique": []},
+            {"nom": "Tirage horizontal", "categorie": CAT_DOS, "poids": 45.0, "reps": 10, "historique": []},
+            {"nom": "Tirage horizontal 1 main", "categorie": CAT_DOS, "poids": 30.0, "reps": 10, "historique": []},
+            {"nom": "Tirage vertical", "categorie": CAT_DOS, "poids": 55.0, "reps": 10, "historique": []},
+            {"nom": "Pull Down", "categorie": CAT_DOS, "poids": 55.0, "reps": 10, "historique": []},
+            {"nom": "Row machine", "categorie": CAT_DOS, "poids": 65.0, "reps": 10, "historique": []},
+            {"nom": "Frontal pull-down (Fond)", "categorie": CAT_DOS, "poids": 40.0, "reps": 10, "historique": []},
+            {"nom": "Low Row", "categorie": CAT_DOS, "poids": 80.0, "reps": 10, "historique": []},
+            {"nom": "Épaule machine", "categorie": CAT_EPAULES, "poids": 25.0, "reps": 10, "historique": []},
+            {"nom": "Shoulder press épaule", "categorie": CAT_EPAULES, "poids": 25.0, "reps": 10, "historique": []},
+            {"nom": "Élévation latérale Machine", "categorie": CAT_EPAULES, "poids": 25.0, "reps": 10, "historique": []},
+            {"nom": "Poulie vis à vis Haut / Triceps", "categorie": CAT_TRICEPS, "poids": 27.5, "reps": 10, "historique": []},
+            {"nom": "Poulie vis à vis Bas Bibi/Tri", "categorie": CAT_TRICEPS, "poids": 20.0, "reps": 10, "historique": []},
+            {"nom": "Poulie Triceps (nuque)", "categorie": CAT_TRICEPS, "poids": 12.0, "reps": 10, "historique": []},
+            {"nom": "Triceps Push Down corde", "categorie": CAT_TRICEPS, "poids": 20.0, "reps": 10, "historique": []},
+            {"nom": "Extension poulie triceps nuque", "categorie": CAT_TRICEPS, "poids": 12.5, "reps": 10, "historique": []},
+            {"nom": "Curl banc allongé (Haltères)", "categorie": CAT_HALTERES, "poids": 30.0, "reps": 10, "historique": []},
+            {"nom": "Assis épaule (Haltères)", "categorie": CAT_HALTERES, "poids": 14.0, "reps": 10, "historique": []},
+            {"nom": "Curl marteaux (Haltères)", "categorie": CAT_HALTERES, "poids": 12.0, "reps": 10, "historique": []},
+            {"nom": "Curl haltère assis", "categorie": CAT_HALTERES, "poids": 12.0, "reps": 11, "historique": []},
+            {"nom": "Élévation latérale (Haltères)", "categorie": CAT_HALTERES, "poids": 10.0, "reps": 15, "historique": []},
+            {"nom": "Curl Pupitre", "categorie": CAT_HALTERES, "poids": 15.0, "reps": 15, "historique": []},
+            {"nom": "Curl Pupitre Altère", "categorie": CAT_HALTERES, "poids": 16.0, "reps": 10, "historique": []}
         ]
-        sauvegarder_donnees()
-    st.session_state.initialise_sport = True
+        sauvegarder_donnees() # Première sauvegarde Cloud de la liste
+    st.session_state.initialise_complet = True
+
+# Initialisation de la variable d'authentification
+if 'authentifie' not in st.session_state:
+    st.session_state.authentifie = False
 
 # ==============================================================================
 # STYLE CSS RE-STYLISÉ
@@ -110,53 +146,60 @@ st.markdown("""
     [data-testid="stSidebar"] { background-color: #1a202c !important; }
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { color: #ffffff !important; }
     .history-row { background-color: #f8fafc; padding: 8px 15px; border-radius: 6px; margin-top: 5px; font-size: 14px; border-left: 3px solid #10b981; }
-    /* Ajustement des conteneurs natifs Streamlit (bordure) */
-    [data-testid="stVerticalBlockBorderWrapper"] { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    /* Style des carrés blancs natifs */
+    [data-testid="stVerticalBlockBorderWrapper"] { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# FONCTION REPRÉSENTATION DU MANNEQUIN EN SVG
+# FONCTION REPRÉSENTATION AMÉLIORÉE DU MANNEQUIN (HTML/SVG)
 # ==============================================================================
-def dessiner_mannequin(categorie_active):
-    color_pecs = "#cbd5e1"
-    color_dos = "#cbd5e1"
-    color_jambes = "#cbd5e1"
-    color_epaules = "#cbd5e1"
-    color_bras = "#cbd5e1"
+def afficher_mannequin_pro(categorie_active):
+    """Génère et affiche le mannequin anatomique professionnel via HTML natif"""
     
-    if "Pecs" in categorie_active: color_pecs = "#ef4444"
-    elif "Dos" in categorie_active: color_dos = "#ef4444"
-    elif "Jambes" in categorie_active: color_jambes = "#ef4444"
-    elif "Épaules" in categorie_active: color_epaules = "#ef4444"
-    elif "Biceps" in categorie_active or "Triceps" in categorie_active or "Haltères" in categorie_active: color_bras = "#ef4444"
+    # Couleurs par défaut (Gris neutre)
+    color_body = "#cbd5e1"
+    color_highlight = "#ef4444" # Rouge vif
 
-    svg_code = f"""
-    <svg width="100%" height="240" viewBox="0 0 300 240" style="background-color:#ffffff; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.02); padding:10px;">
-        <text x="50" y="20" font-size="12" font-weight="bold" fill="#64748b" text-anchor="middle">FACE</text>
-        <circle cx="50" cy="45" r="12" fill="#cbd5e1" />
-        <path d="M42 60 L58 60 L62 65 L38 65 Z" fill="#cbd5e1" />
-        <rect x="34" y="65" width="32" height="15" rx="3" fill="{color_pecs}" />
-        <rect x="36" y="82" width="28" height="25" rx="2" fill="#cbd5e1" />
-        <path d="M22 65 L32 65 L26 110 L18 110 Z" fill="{color_bras}" />
-        <path d="M68 65 L78 65 L74 110 L82 110 Z" fill="{color_bras}" />
-        <path d="M36 110 L48 110 L46 190 L34 190 Z" fill="{color_jambes}" />
-        <path d="M52 110 L64 110 L66 190 L54 190 Z" fill="{color_jambes}" />
-        <rect x="30" y="62" width="40" height="6" rx="2" fill="{color_epaules}" />
+    # Logique d'allumage des zones
+    c_pecs = color_body
+    c_dos = color_body
+    c_jambes_f = color_body # Face
+    c_jambes_d = color_body # Dos
+    c_epaules = color_body
+    c_biceps = color_body
+    c_triceps = color_body
 
-        <text x="180" y="20" font-size="12" font-weight="bold" fill="#64748b" text-anchor="middle">DOS</text>
-        <circle cx="180" cy="45" r="12" fill="#cbd5e1" />
-        <path d="M172 60 L188 60 L192 65 L168 65 Z" fill="#cbd5e1" />
-        <path d="M162 65 L198 65 L194 108 L166 108 Z" fill="{color_dos}" />
-        <rect x="166" y="109" width="28" height="10" fill="#cbd5e1" />
-        <path d="M152 65 L160 65 L156 110 L148 110 Z" fill="{color_bras}" />
-        <path d="M200 65 L208 65 L204 110 L212 110 Z" fill="{color_bras}" />
-        <path d="M166 121 L179 121 L177 190 L164 190 Z" fill="{color_jambes}" />
-        <path d="M181 121 L194 121 L196 190 L183 190 Z" fill="{color_jambes}" />
-        <rect x="160" y="62" width="40" height="6" rx="2" fill="{color_epaules}" />
-    </svg>
+    if CAT_PECS in categorie_active: c_pecs = color_highlight
+    elif CAT_DOS in categorie_active: c_dos = color_highlight
+    elif CAT_JAMBES in categorie_active: 
+        c_jambes_f = color_highlight
+        c_jambes_d = color_highlight
+    elif CAT_EPAULES in categorie_active: c_epaules = color_highlight
+    elif CAT_BICEPS in categorie_active: c_biceps = color_highlight
+    elif CAT_TRICEPS in categorie_active: c_triceps = color_highlight
+    elif CAT_HALTERES in categorie_active:
+        # Haltères touche souvent Biceps, Épaules ou Pecs, on allume les bras par défaut
+        c_biceps = color_highlight
+        c_triceps = color_highlight
+
+    # Code HTML/SVG complet du mannequin professionnel
+    html_code = f"""
+    <div style="background-color: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+        <svg width="280" height="260" viewBox="0 0 300 260">
+            <text x="70" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">FACE</text>
+            <g transform="translate(10, 30)">
+                <circle cx="60" cy="20" r="15" fill="#cbd5e1" /> <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" /> <rect x="42" y="42" width="16" height="22" rx="3" fill="{c_pecs}" /> <rect x="62" y="42" width="16" height="22" rx="3" fill="{c_pecs}" /> <rect x="45" y="66" width="30" height="35" rx="2" fill="#cbd5e1" /> <circle cx="38" cy="48" r="8" fill="{c_epaules}" /> <circle cx="82" cy="48" r="8" fill="{c_epaules}" /> <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_biceps}" /> <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_biceps}" /> <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" /> <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" /> <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_f}" /> <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_f}" /> <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" /> <rect x="64" y="160" width="13" height="30" rx="2" fill="#cbd5e1" /> </g>
+
+            <text x="210" y="20" font-family="Arial" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">DOS</text>
+            <g transform="translate(150, 30)">
+                <circle cx="60" cy="20" r="15" fill="#cbd5e1" /> <path d="M50 35 L70 35 L75 42 L45 42 Z" fill="#cbd5e1" /> <path d="M40 42 L80 42 L75 90 L45 90 Z" fill="{c_dos}" /> <rect x="48" y="90" width="24" height="12" rx="2" fill="#cbd5e1" /> <circle cx="38" cy="48" r="8" fill="{c_epaules}" /> <circle cx="82" cy="48" r="8" fill="{c_epaules}" /> <path d="M28 55 L38 55 L35 90 L25 90 Z" fill="{c_triceps}" /> <path d="M82 55 L92 55 L95 90 L85 90 Z" fill="{c_triceps}" /> <path d="M24 90 L34 90 L32 120 L22 120 Z" fill="#cbd5e1" /> <path d="M86 90 L96 90 L98 120 L88 120 Z" fill="#cbd5e1" /> <path d="M45 102 L58 102 L56 160 L43 160 Z" fill="{c_jambes_d}" /> <path d="M62 102 L75 102 L77 160 L64 160 Z" fill="{c_jambes_d}" /> <rect x="43" y="160" width="13" height="30" rx="2" fill="#cbd5e1" /> <rect x=" Mollet D -->
+            </g>
+        </svg>
+    </div>
     """
-    return st.markdown(svg_code, unsafe_allow_html=True)
+    # NOUVEAU : Affichage pro via le composant HTML
+    return components.html(html_code, height=300)
 
 # ==============================================================================
 # MENU LATÉRAL
@@ -203,10 +246,12 @@ with col_gauche:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Affichage de chaque exercice dans un "carré blanc" natif (container avec bordure)
-    for idx, exo in enumerate(exercices_filtrés):
+    # Affichage de chaque exercice dans un carré blanc natif
+    for exo in exercices_filtrés:
+        # Trouver l'index réel dans la session_state globale
         index_reel = st.session_state.exercices_sport.index(exo)
         
+        # Carré blanc natif Streamlit
         with st.container(border=True):
             st.markdown(f"<h3 style='margin-bottom:0;'>{exo['nom']} <span style='font-size:12px; font-weight:normal; background-color:#e2e8f0; padding:2px 8px; border-radius:10px; color:#475569; margin-left:10px;'>{exo['categorie']}</span></h3>", unsafe_allow_html=True)
             
@@ -216,7 +261,7 @@ with col_gauche:
             poids_saisi = c1.number_input("Poids (kg)", min_value=0.0, value=float(exo["poids"]), step=0.5, key=f"poids_{index_reel}")
             reps_saisie = c2.number_input("Répétitions", min_value=0, value=int(exo["reps"]), step=1, key=f"reps_{index_reel}")
             
-            c3.write("") # Petit espacement pour aligner le bouton avec les champs
+            c3.write("") # Petit espacement pour aligner le bouton
             c3.write("")
             if c3.button("Actualiser ⚡", key=f"btn_{index_reel}", use_container_width=True):
                 if poids_saisi != exo["poids"] or reps_saisie != exo["reps"]:
@@ -236,7 +281,7 @@ with col_gauche:
                     st.success("Enregistré !")
                     st.rerun()
             
-            # Historique et Suppression cachés dans un déroulant pour ne pas polluer l'interface
+            # Historique et Suppression cachés dans un déroulant
             with st.expander("📜 Voir l'historique & Options", expanded=False):
                 if exo["historique"]:
                     for log in reversed(exo["historique"]):
@@ -256,6 +301,7 @@ with col_gauche:
 
 with col_droite:
     st.markdown("<h2 style='text-align: center;'>Anatomie Ciblée</h2>", unsafe_allow_html=True)
-    st.write("Le mannequin met en valeur la zone musculaire sélectionnée à gauche :")
+    st.write("Le mannequin met en valeur la zone musculaire travaillée par la catégorie sélectionnée à gauche :")
     
-    dessiner_mannequin(filtre_cat)
+    # Affichage du tout nouveau mannequin professionnel
+    afficher_mannequin_pro(filtre_cat)
